@@ -5,15 +5,15 @@ permissions:
   contents: read
 
 on:
-  push:
-    branches:
-      - '**'
-    paths:
-      - '**.tf'
-  pull_request:
-    branches:
-      - main
-
+  # push:
+  #   branches:
+  #     - '**'
+  #   paths:
+  #     - '**.tf'
+  # pull_request:
+  #   branches:
+  #     - main
+  workflow_dispatch:
 jobs:
   terraform:
     name: Terraform Pipeline
