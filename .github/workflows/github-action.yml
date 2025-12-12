@@ -1,5 +1,4 @@
 name: Terraform CI/CD
-
 # Required for OIDC
 permissions:
   id-token: write
