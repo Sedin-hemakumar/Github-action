@@ -1,194 +1,47 @@
-############################################
-# VPC
-############################################
-
-resource "aws_vpc" "this" {
-  cidr_block                           = var.vpc_cidr
-  enable_dns_support                   = var.status_enable_dns_support
-  enable_dns_hostnames                 = var.enable_dns_hostnames
-  instance_tenancy                     = "default"
-  tags                                 = var.tags
-}
-
-############################################
-# PUBLIC SUBNETS
-############################################
-
-resource "aws_subnet" "public" {
-  for_each = var.public_subnets
-
-  vpc_id                  = aws_vpc.this.id
-  cidr_block              = each.value.cidr
-  availability_zone       = each.value.az
-  map_public_ip_on_launch = each.value.map_public_ip_on_launch
-  tags                    = each.value.tags
-}
-
-############################################
-# PRIVATE SUBNETS
-############################################
-
-resource "aws_subnet" "private" {
-  for_each = var.private_subnets
-
-  vpc_id                  = aws_vpc.this.id
-  cidr_block              = each.value.cidr
-  availability_zone       = each.value.az
-  map_public_ip_on_launch = each.value.map_public_ip_on_launch
-  tags                    = each.value.tags
-}
-
-############################################
-# INTERNET GATEWAY
-############################################
-
-resource "aws_internet_gateway" "this" {
-  count = length(var.public_subnets) > 0 ? 1 : 0
-  vpc_id = aws_vpc.this.id
-  tags   = var.igw_tags
-}
-
-############################################
-# MAIN ROUTE TABLE (Existing)
-############################################
-
-resource "aws_route_table" "main" {
-  vpc_id = aws_vpc.this.id
-  tags   = var.main_rt_tags
-}
-
 locals {
-  main_route_table_id = aws_route_table.main.id
+region = "us-east-1"
+hosted_zone_name = "71.53.52.in-addr.arpa"
+soa_record_name = "71.53.52.in-addr.arpa"
+soa_recordtype = "SOA"
+soa_record_ttl = 900
+soa_record_records = ["ns-1354.awsdns-41.org. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400"]
+
+# NS Records
+ns_record_name = "71.53.52.in-addr.arpa"
+ns_record_type = "NS"
+ns_record_ttl = 172800
+ns_record_records = ["ns-1354.awsdns-41.org.",
+    "ns-1615.awsdns-09.co.uk.",
+    "ns-281.awsdns-35.com.",
+    "ns-535.awsdns-02.net."]
+
+# PTR Records
+ptr_record_name = "84.71.53.52.in-addr.arpa"
+ptr_record_type = "PTR"
+ptr_record_ttl = 300
+ptr_record_records = ["mail.sedintechnologies.net"]
+
+#comment 
+comment = "testing"
 }
-
-###########################################
-#MAIN RT ASSOCIATION (Set as Main)
-###########################################
-
-resource "aws_main_route_table_association" "main" {
-  vpc_id         = aws_vpc.this.id
-  route_table_id = local.main_route_table_id
+provider "aws" {
+  region = local.region
 }
-
-############################################
-# OPTIONAL MAIN IGW ROUTE (0.0.0.0/0)
-############################################
-
-resource "aws_route" "main_internet_route" {
-  count = var.manage_main_igw_route && length(var.public_subnets) > 0 ? 1 : 0
-
-  route_table_id         = local.main_route_table_id
-  destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = aws_internet_gateway.this[0].id
-}
-
-############################################
-# PUBLIC ROUTE TABLE (Optional)
-############################################
-
-resource "aws_route_table" "public" {
-  count = var.create_public_route_table ? 1 : 0
-
-  vpc_id = aws_vpc.this.id
-  tags   = var.public_rt_tags
-}
-
-locals {
-  public_route_table_id = (
-    var.create_public_route_table
-    ? aws_route_table.public[0].id
-    : var.existing_public_route_table_id
-  )
-}
-
-############################################
-# PUBLIC ROUTE: IGW
-############################################
-
-resource "aws_route" "public_internet_route" {
-  count = length(var.public_subnets) > 0 ? 1 : 0
-
-  route_table_id         = local.public_route_table_id
-  destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = aws_internet_gateway.this[0].id
-}
-
-############################################
-# PRIVATE ROUTE TABLE (Optional)
-############################################
-
-resource "aws_route_table" "private" {
-  count = var.create_private_route_table ? 1 : 0
-
-  vpc_id = aws_vpc.this.id
-  tags   = var.private_rt_tags
-}
-
-locals {
-  private_route_table_id = (
-    var.create_private_route_table
-    ? aws_route_table.private[0].id
-    : var.existing_private_route_table_id
-  )
-}
-
-############################################
-# NAT EIP
-############################################
-
-resource "aws_eip" "nat" {
-  count  = var.nat_enabled ? 1 : 0
-  domain = "vpc"
-}
-
-############################################
-# NAT GATEWAY
-############################################
-
-resource "aws_nat_gateway" "this" {
-  count = var.nat_enabled ? 1 : 0
-
-  allocation_id = aws_eip.nat[0].id
-  subnet_id     = var.nat_subnet_id != null ? var.nat_subnet_id : element(values(aws_subnet.public), 0).id
-
-  depends_on = [aws_internet_gateway.this]
-  lifecycle {
-    ignore_changes = [
-      regional_nat_gateway_address
-    ]
-  }
-}
-
-############################################
-# PRIVATE NAT ROUTE
-############################################
-
-resource "aws_route" "private_nat_route" {
-  count = var.nat_enabled && length(var.private_subnets) > 0 ? 1 : 0
-
-  route_table_id         = local.private_route_table_id
-  destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = aws_nat_gateway.this[0].id
-}
-
-############################################
-# PUBLIC SUBNET → PUBLIC RT
-############################################
-
-resource "aws_route_table_association" "public_assoc" {
-  for_each = var.manage_public_assoc ? var.public_subnets : {}
-
-  subnet_id      = aws_subnet.public[each.key].id
-  route_table_id = local.public_route_table_id
-}
-
-############################################
-# PRIVATE SUBNET → PRIVATE RT
-############################################
-
-resource "aws_route_table_association" "private_assoc" {
-  for_each = var.manage_private_assoc ? var.private_subnets : {}
-
-  subnet_id      = aws_subnet.private[each.key].id
-  route_table_id = local.private_route_table_id
-}
+ module "Route53" {
+   source = "./module"
+   hosted_zone_name = local.hosted_zone_name
+   vpc_ids = []
+   soa_record_name = local.soa_record_name
+   soa_recordtype = local.soa_recordtype
+   soa_record_ttl = local.soa_record_ttl
+   soa_record_records = local.soa_record_records
+   ns_record_name = local.ns_record_name
+   ns_record_type = local.ns_record_type
+   ns_record_ttl = local.ns_record_ttl
+   ns_record_records = local.ns_record_records
+   ptr_record_name = local.ptr_record_name
+   ptr_record_type = local.ptr_record_type
+   ptr_record_ttl = local.ptr_record_ttl
+   ptr_record_records = local.ptr_record_records
+   comment = local.comment
+ }
