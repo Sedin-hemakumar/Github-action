@@ -1,5 +1,5 @@
 name: Terraform CI/CD
-# Required for OIDC
+
 permissions:
   id-token: write
   contents: read
@@ -14,10 +14,79 @@ on:
     branches:
       - main
   workflow_dispatch:
+
 jobs:
-  terraform:
-    name: Terraform Pipeline
+
+  # -----------------------------
+  # 1. Checkout code + Setup Terraform
+  # -----------------------------
+  setup:
+    name: Setup Environment
     runs-on: ubuntu-latest
+
+    outputs:
+      terraform_version: 1.6.0
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        id: tf
+        with:
+          terraform_version: 1.6.0
+
+  # -----------------------------
+  # 2. AWS Authentication via OIDC
+  # -----------------------------
+  auth:
+    name: AWS OIDC Authentication
+    runs-on: ubuntu-latest
+    needs: setup
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::156916773321:role/OIDC-connection
+          aws-region: ap-south-1
+
+  # -----------------------------
+  # 3. Terraform Init + Validate
+  # -----------------------------
+  init_validate:
+    name: Terraform Init & Validate
+    runs-on: ubuntu-latest
+    needs: auth
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.6.0
+
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      - name: Terraform Validate
+        run: terraform validate
+
+  # -----------------------------
+  # 4. Terraform Plan
+  # -----------------------------
+  plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: init_validate
+
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
 
     steps:
       - name: Checkout repository
@@ -34,16 +103,33 @@ jobs:
           role-to-assume: arn:aws:iam::156916773321:role/OIDC-connection
           aws-region: ap-south-1
 
-      - name: Terraform Init
-        run: terraform init -input=false
-
-      - name: Terraform Validate
-        run: terraform validate
-
       - name: Terraform Plan
-        if: github.event_name == 'push' || github.event_name == 'pull_request'
         run: terraform plan -input=false
 
-     # - name: Terraform Apply
-       # if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        #run: terraform apply -auto-approve -input=false
+  # -----------------------------
+  # 5. Terraform Apply (Only on main)
+  # -----------------------------
+  # apply:
+  #   name: Terraform Apply
+  #   runs-on: ubuntu-latest
+  #   needs: plan
+
+  #   if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v3
+
+  #     - name: Setup Terraform
+  #       uses: hashicorp/setup-terraform@v2
+  #       with:
+  #         terraform_version: 1.6.0
+
+  #     - name: Configure AWS Credentials (OIDC)
+  #       uses: aws-actions/configure-aws-credentials@v2
+  #       with:
+  #         role-to-assume: arn:aws:iam::156916773321:role/OIDC-connection
+  #         aws-region: ap-south-1
+
+  #     - name: Terraform Apply
+  #       run: terraform apply -auto-approve -input=false
