@@ -73,9 +73,11 @@ jobs:
           terraform_version: 1.6.0
 
       - name: Terraform Init
+        working-directory: .
         run: terraform init -input=false
 
       - name: Terraform Validate
+        working-directory: .
         run: terraform validate
 
   # -----------------------------
@@ -104,6 +106,7 @@ jobs:
           aws-region: ap-south-1
 
       - name: Terraform Plan
+        working-directory: .
         run: terraform plan -input=false
 
   # -----------------------------
