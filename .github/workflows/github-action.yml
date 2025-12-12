@@ -30,7 +30,7 @@ jobs:
     # AWS Credentials from GitHub Secrets
       name: Configure AWS Credentials
       runs-on: ubuntu-latest
-      source: terraform
+      needs: terraform
       permissions:
         id-token: write
         contents: read
