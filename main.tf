@@ -15,7 +15,7 @@ ns_record_records = ["ns-1354.awsdns-41.org.",
     "ns-281.awsdns-35.com.",
     "ns-535.awsdns-02.net."]
 
-# PTR Record
+# PTR Records
 ptr_record_name = "84.71.53.52.in-addr.arpa"
 ptr_record_type = "PTR"
 ptr_record_ttl = 300
