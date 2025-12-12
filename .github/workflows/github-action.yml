@@ -34,7 +34,7 @@ jobs:
           #aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           role-to-assume: arn:aws:iam::156916773321:role/OIDC-connection
           aws-region: ap-south-1
-          #role-skip-session-tagging: true
+          #role-skip-session-tagging: trues
 
       # Initialize Terraform
       - name: Terraform Init
