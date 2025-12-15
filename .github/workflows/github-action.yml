@@ -64,11 +64,11 @@ jobs:
     needs: auth
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repository # download gitrepo to vm
         uses: actions/checkout@v3
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
+        uses: hashicorp/setup-terraform@v2 # 
         with:
           terraform_version: 1.6.0
 
