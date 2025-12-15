@@ -137,6 +137,9 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::156916773321:role/OIDC-connection
           aws-region: ap-south-1
-
+      - name: Terraform Init
+        working-directory: .
+        run: terraform init -input=false
+        
       - name: Terraform Apply
         run: terraform apply -auto-approve -input=false
