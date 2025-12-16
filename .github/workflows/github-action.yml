@@ -73,7 +73,7 @@ jobs:
       - name: Configure AWS Credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: arn:aws:iam::156916773321:role/OIDC-connection
+          role-to-assume: arn:aws:iam::156916773321:role/OIDC-1
           aws-region: ap-south-1
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2 # 
