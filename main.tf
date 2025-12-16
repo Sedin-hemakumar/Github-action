@@ -6,7 +6,7 @@ soa_recordtype = "SOA"
 soa_record_ttl = 900
 soa_record_records = ["ns-1354.awsdns-41.org. awsdns-hostmaster.amazon.com. 1 7200 900 1209600 86400"]
 
-# NS Record
+# NS Records
 ns_record_name = "71.53.52.in-addr.arpa"
 ns_record_type = "NS"
 ns_record_ttl = 172800
