@@ -4,19 +4,34 @@ permissions:
   id-token: write
   contents: read
 
+# on:
+#   push:
+#     branches:
+#       - 'main'
+#     paths:
+#       - "**/**.tf"
+#   pull_request:
+#     branches:
+#       - main
+#     paths:
+#       - "**/**.tf"
+      
+#   workflow_dispatch:
 on:
   push:
     branches:
-      - 'main'
+      - '**'
     paths:
-      - "**/**.tf"
+      - "**/*.tf"
+
   pull_request:
     branches:
       - main
     paths:
-      - "**/**.tf"
-      
+      - "**/*.tf"
+
   workflow_dispatch:
+
 
 jobs:
 
