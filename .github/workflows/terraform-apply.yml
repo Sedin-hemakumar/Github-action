@@ -18,9 +18,37 @@ on:
       - "**/*.tf"
 
   workflow_dispatch:
-  
+
 jobs:
-  
+  # -----------------------------
+  # 3. Terraform Init + Validate
+  # -----------------------------
+  init_setup:
+    name: Initial Setup
+    runs-on: ubuntu-latest
+    
+
+    steps:
+      - name: Checkout repository # download gitrepo to vm
+        uses: actions/checkout@v3
+     
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::156916773321:role/OIDC-1
+          aws-region: ap-south-1
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2 # 
+        with:
+          terraform_version: 1.6.0
+
+      - name: Terraform Init
+        working-directory: .
+        run: terraform init -input=false
+
+      - name: Terraform Validate
+        working-directory: .
+        run: terraform validate
   
   # -----------------------------
   # 5. Terraform Apply (Only on main)
@@ -28,7 +56,7 @@ jobs:
   apply:
     name: Terraform Apply
     runs-on: ubuntu-latest
-    needs: plan
+    needs: init_setup
 
     if: github.event_name == 'workflow_dispatch'
 
